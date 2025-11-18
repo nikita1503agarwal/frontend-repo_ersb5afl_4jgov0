@@ -1,12 +1,12 @@
 function Features() {
   const items = [
     {
-      title: 'Two‑party confirmations',
-      desc: 'Funds unlock only when both payer and recipients confirm. No surprises.'
+      title: 'P2P payments via Telegram',
+      desc: 'Create, confirm, and release escrows directly from chat commands.'
     },
     {
-      title: 'Split payouts',
-      desc: 'Distribute a single payment across multiple recipients by percentage.'
+      title: 'One‑tap splits',
+      desc: 'Move funds to a single recipient or split among multiple peers.'
     },
     {
       title: 'Chain‑agnostic',

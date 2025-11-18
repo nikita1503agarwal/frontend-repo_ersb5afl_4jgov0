@@ -38,15 +38,14 @@ function RecipientRow({ index, value, onChange, onRemove }) {
 }
 
 function Hero() {
-  const [title, setTitle] = useState('Design sprint invoice')
-  const [description, setDescription] = useState('One week design sprint with deliverables')
-  const [payerEmail, setPayerEmail] = useState('client@company.com')
-  const [amount, setAmount] = useState(2500)
+  const [title, setTitle] = useState('P2P payment')
+  const [description, setDescription] = useState('Send money to a peer and release when confirmed')
+  const [payerEmail, setPayerEmail] = useState('me@example.com')
+  const [amount, setAmount] = useState(25)
   const [currency, setCurrency] = useState('USDC')
   const [chain, setChain] = useState('testnet')
   const [recipients, setRecipients] = useState([
-    { email: 'alice@studio.com', percentage: 70, wallet: '' },
-    { email: 'bob@studio.com', percentage: 30, wallet: '' },
+    { email: 'friend@example.com', percentage: 100, wallet: '' },
   ])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -62,23 +61,45 @@ function Hero() {
     setLoading(true)
     setMessage('')
     try {
-      const res = await fetch(`${baseUrl}/api/escrows`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          payer_email: payerEmail,
-          total_amount: parseFloat(amount),
-          currency,
-          chain,
-          recipients,
+      // If single recipient with 100%, hit the P2P optimized endpoint
+      const isP2P = recipients.length === 1 && recipients[0].percentage === 100
+      if (isP2P) {
+        const res = await fetch(`${baseUrl}/api/p2p`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payer_email: payerEmail,
+            recipient_email: recipients[0].email,
+            amount: parseFloat(amount),
+            currency,
+            chain,
+            title,
+            description,
+          })
         })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Failed to create escrow')
-      setMessage('Escrow created. Share the ID to confirm and release.')
-      setCreatedId(data.id)
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.detail || 'Failed to create P2P escrow')
+        setMessage('P2P escrow created. Share the ID to confirm and release in Telegram.')
+        setCreatedId(data.id)
+      } else {
+        const res = await fetch(`${baseUrl}/api/escrows`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            description,
+            payer_email: payerEmail,
+            total_amount: parseFloat(amount),
+            currency,
+            chain,
+            recipients,
+          })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.detail || 'Failed to create escrow')
+        setMessage('Escrow created. Share the ID to confirm and release.')
+        setCreatedId(data.id)
+      }
     } catch (e) {
       setMessage(e.message)
     } finally {
@@ -127,11 +148,11 @@ function Hero() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid md:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-2xl font-semibold text-white mb-3">Create an escrow</h2>
+            <h2 className="text-2xl font-semibold text-white mb-3">P2P / Telegram‑first</h2>
             <div className="space-y-3">
               <input className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="Title" />
               <input className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={description} onChange={(e)=>setDescription(e.target.value)} placeholder="Description" />
-              <input type="email" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={payerEmail} onChange={(e)=>setPayerEmail(e.target.value)} placeholder="Payer email" />
+              <input type="email" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={payerEmail} onChange={(e)=>setPayerEmail(e.target.value)} placeholder="Your email (payer)" />
               <div className="grid grid-cols-3 gap-3">
                 <input type="number" className="col-span-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={amount} onChange={(e)=>setAmount(e.target.value)} placeholder="Amount" />
                 <select className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50" value={currency} onChange={(e)=>setCurrency(e.target.value)}>
@@ -150,7 +171,7 @@ function Hero() {
 
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-white font-medium">Recipients</h3>
+                  <h3 className="text-white font-medium">Recipient</h3>
                   <button onClick={addRecipient} className="text-blue-300 hover:text-white text-sm">+ Add</button>
                 </div>
                 <div className="space-y-2">
@@ -161,7 +182,7 @@ function Hero() {
               </div>
 
               <button onClick={createEscrow} disabled={loading} className="w-full mt-2 rounded-lg bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-semibold py-2">
-                {loading ? 'Creating...' : 'Create Escrow'}
+                {loading ? 'Creating...' : 'Create P2P Escrow'}
               </button>
 
               {createdId && (
@@ -172,6 +193,10 @@ function Hero() {
               {message && (
                 <div className="mt-3 text-blue-200/90 text-sm">{message}</div>
               )}
+
+              <div className="mt-4 text-blue-200/90 text-sm">
+                Tip: In Telegram, use these commands with our bot: <span className="font-mono text-white">/link you@example.com</span>, <span className="font-mono text-white">/pay friend@example.com 25 USDC</span>, <span className="font-mono text-white">/confirm &lt;escrow_id&gt;</span>, <span className="font-mono text-white">/release &lt;escrow_id&gt;</span>.
+              </div>
             </div>
           </div>
 
@@ -185,7 +210,7 @@ function Hero() {
               <button onClick={release} disabled={!createdId || loading} className="w-full rounded-lg bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-semibold py-2">Release Funds</button>
 
               <div className="mt-6 rounded-xl bg-white/5 ring-1 ring-white/10 p-4 text-blue-200/90 text-sm">
-                This demo simulates the on‑chain release by updating status when all parties have confirmed. Integrations can connect to real smart contracts later.
+                P2P flow uses a single 100% recipient. Telegram commands let you do the same directly in chat.
               </div>
             </div>
           </div>
